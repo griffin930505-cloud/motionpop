@@ -1,0 +1,1 @@
+Trigger Vercel deployment after Next.js security update.
