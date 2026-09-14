@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 
 type Effect = 'zoom'|'bounce'|'shake'|'pulse'|'slide';
+type TextPos = 'top'|'center'|'bottom';
 const effects:{id:Effect;name:string;desc:string;emoji:string}[]=[
  {id:'zoom',name:'줌인',desc:'시그니처·등장',emoji:'🔍'},
  {id:'bounce',name:'바운스',desc:'후원·축하',emoji:'🎉'},
@@ -15,8 +16,10 @@ function ease(t:number){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
 export default function Home(){
  const [src,setSrc]=useState<string>(''); const [effect,setEffect]=useState<Effect>('bounce'); const [ratio,setRatio]=useState('1:1');
  const [text,setText]=useState('오늘도 레전드!'); const [seconds,setSeconds]=useState(2); const [busy,setBusy]=useState(false); const [result,setResult]=useState('');
- const fileRef=useRef<HTMLInputElement>(null); const r=useMemo(()=>ratios.find(x=>x.id===ratio)!,[ratio]);
+ const [videoSrc,setVideoSrc]=useState(''); const [videoText,setVideoText]=useState('오늘도 레전드!'); const [videoPos,setVideoPos]=useState<TextPos>('bottom');
+ const fileRef=useRef<HTMLInputElement>(null); const videoRef=useRef<HTMLInputElement>(null); const r=useMemo(()=>ratios.find(x=>x.id===ratio)!,[ratio]);
  const onFile=(f?:File)=>{if(!f)return; if(!f.type.startsWith('image/'))return alert('이미지 파일을 선택해주세요.'); const u=URL.createObjectURL(f); setSrc(u); setResult('');}
+ const onVideo=(f?:File)=>{if(!f)return; if(!f.type.startsWith('video/'))return alert('영상 파일을 선택해주세요.'); const u=URL.createObjectURL(f); setVideoSrc(u);}
  const generate=async()=>{
    if(!src)return alert('먼저 사진을 넣어주세요.'); setBusy(true); setResult('');
    try{
@@ -50,6 +53,14 @@ export default function Home(){
     <div className="panel upload"><h2>1. 사진 넣기</h2><div className={'drop '+(src?'has':'')} onClick={()=>fileRef.current?.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();onFile(e.dataTransfer.files[0])}}>{src?<img src={src} alt="preview"/>:<><div className="uploadIcon">＋</div><b>클릭하거나 사진을 드래그하세요</b><small>JPG · PNG · WEBP</small></>}</div><input ref={fileRef} type="file" accept="image/*" hidden onChange={e=>onFile(e.target.files?.[0])}/><label>넣을 문구<input value={text} maxLength={24} onChange={e=>setText(e.target.value)} placeholder="예: 10,000개 감사합니다!"/></label></div>
     <div className="panel"><h2>2. 움직임 고르기</h2><div className="effects">{effects.map(x=><button key={x.id} className={effect===x.id?'active':''} onClick={()=>setEffect(x.id)}><i>{x.emoji}</i><b>{x.name}</b><small>{x.desc}</small></button>)}</div><h3>화면 비율</h3><div className="seg">{ratios.map(x=><button className={ratio===x.id?'active':''} onClick={()=>setRatio(x.id)} key={x.id}>{x.id}</button>)}</div><h3>길이</h3><div className="seg">{[1,2,3].map(x=><button className={seconds===x?'active':''} onClick={()=>setSeconds(x)} key={x}>{x}초</button>)}</div><button className="generate" disabled={busy} onClick={generate}>{busy?'GIF 만드는 중…':'✨ GIF 자동 만들기'}</button></div>
     <div className="panel result"><h2>3. 완성</h2><div className="resultbox" style={{aspectRatio:`${r.w}/${r.h}`}}>{result?<img src={result} alt="generated gif"/>:<div><span>▶</span><b>완성된 GIF가 여기에 표시됩니다</b><small>사진과 효과를 선택해 만들어보세요</small></div>}</div>{result&&<a className="download" href={result} download="motionpop.gif">GIF 다운로드</a>}</div>
+   </section>
+   <section className="videoSection">
+    <div className="sectionTitle"><span>NEW</span><h2>영상에 문구 넣기</h2><p>내 영상을 올리고 원하는 문구를 바로 얹어보세요.</p></div>
+    <div className="videoMaker">
+      <div className="panel videoUpload"><h2>1. 영상 넣기</h2><div className={'videoDrop '+(videoSrc?'has':'')} onClick={()=>videoRef.current?.click()}>{videoSrc?<video src={videoSrc} controls playsInline/>:<><div className="uploadIcon">▶</div><b>클릭해서 영상을 선택하세요</b><small>MP4 · WEBM · MOV</small></>}</div><input ref={videoRef} type="file" accept="video/*" hidden onChange={e=>onVideo(e.target.files?.[0])}/></div>
+      <div className="panel videoTextPanel"><h2>2. 문구 넣기</h2><label>영상에 표시할 문구<input value={videoText} maxLength={40} onChange={e=>setVideoText(e.target.value)} placeholder="예: 오늘도 와주셔서 감사합니다!"/></label><h3>문구 위치</h3><div className="seg">{(['top','center','bottom'] as TextPos[]).map(p=><button key={p} className={videoPos===p?'active':''} onClick={()=>setVideoPos(p)}>{p==='top'?'위':p==='center'?'가운데':'아래'}</button>)}</div><div className="videoTip">영상 위 문구는 실시간으로 미리보기 됩니다.</div></div>
+      <div className="panel"><h2>3. 미리보기</h2><div className="videoPreview">{videoSrc?<><video src={videoSrc} controls playsInline/><div className={'videoCaption '+videoPos}>{videoText}</div></>:<div className="videoEmpty"><span>▶</span><b>영상 미리보기</b><small>영상을 넣으면 문구가 함께 표시됩니다</small></div>}</div></div>
+    </div>
    </section>
    <section className="usecases"><h2>방송인은 이렇게 씁니다</h2><div><article><span>💸</span><b>후원 리액션</b><p>닉네임·후원 숫자를 넣어 즉석 감사 GIF</p></article><article><span>🎂</span><b>생일·기념일</b><p>사진 한 장으로 축하용 움직이는 시그니처</p></article><article><span>😂</span><b>밈 & 짤</b><p>방송 캡처를 흔들고 튕겨 바로 공유</p></article><article><span>🔥</span><b>틱톡·릴스</b><p>세로 9:16 GIF/짧은 영상 소재 제작</p></article></div></section>
    <footer>© 2026 MOTIONPOP — Built for creators</footer>
